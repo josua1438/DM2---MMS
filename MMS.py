@@ -9,13 +9,15 @@ Created on Wed Oct 12 01:56:25 2022
 import numpy as np
 import matplotlib.pyplot as plt
 
+
 #Définition des constantes
 Deff = 1E-10
 S = 1E-8
 Ce = 10
+k = 4E-9
 R1 = 0.5
 C0 = 5
-t0 = 1
+t0 = 10000
 
 #solveur de système matriciel avec les fonctions d'inversions numpy
 def inverseur(M1,V1):
@@ -33,10 +35,10 @@ def solution_numérique(R,Ntot,t,tour):
     #Construction de la matrice des équations (termes faisant intervenir les inconnues)
     for i in range(Ntot-3):
         M[i][i] = (i+0.5)*Deff*t*deltar
-        M[i][i+1] =  -(i+1)*deltar**3 - 2*(i+1)*Deff*t*deltar
+        M[i][i+1] =  -(i+1)*deltar**3 - 2*(i+1)*Deff*t*deltar #- k*t*(i+1)*deltar**3 #pour le terme source en kc
         M[i][i+2] = (i+1.5)*Deff*t*deltar
         
-    M[-2][-1] = -(Ntot-2)*deltar**3 - 2*(Ntot-2)*Deff*t*deltar #(derniers termes de la matrice)
+    M[-2][-1] = -(Ntot-2)*deltar**3 - 2*(Ntot-2)*Deff*t*deltar #- k*t*(Ntot-2)*deltar**3 #pour le terme source en kc #(derniers termes de la matrice)
     M[-2][-2] =  (Ntot-2.5)*Deff*t*deltar
         
 #Même condition que précédemment    
@@ -53,9 +55,11 @@ def solution_numérique(R,Ntot,t,tour):
     V = np.zeros(Ntot-1)
     for i in range(Ntot-3):
         S = np.exp(-t/t0)*(C0*Deff*4/R**2 + (C0/t0)*(((i+1)*deltar)**2/R**2 - 1))
-        V[i] = (i+1)*S*t*deltar**3 - (C0*(((i+1)*deltar)**2/R**2 - 1)*np.exp(-t/t0)+Ce)*(i+1)*deltar**3
+        #S = np.exp(-t/t0)*(C0*Deff*4/R**2 + (C0/t0)*(((i+1)*deltar)**2/R**2 - 1)) - k*(C0*(((i+1)*deltar)**2/R**2 - 1)*np.exp(-t/t0) + Ce)
+        V[i] = (i+1)*S*t*deltar**3 - (C0*(((i+1)*deltar)**2/R**2 - 1)*np.exp(0/t0)+Ce)*(i+1)*deltar**3
     S = np.exp(-t/t0)*(C0*Deff*4/R**2 + (C0/t0)*(((Ntot-2)*deltar)**2/R**2 - 1))
-    V[-2] = (Ntot-2)*S*t*deltar**3 - (Ntot-1.5)*Deff*deltar*t*Ce - (C0*(((Ntot-2)*deltar)**2/R**2 - 1)*np.exp(-t/t0)+Ce)*(Ntot-2)*deltar**3
+    #S = np.exp(-t/t0)*(C0*Deff*4/R**2 + (C0/t0)*(((Ntot-2)*deltar)**2/R**2 - 1)) - k*(C0*(((Ntot-2)*deltar)**2/R**2 - 1)*np.exp(-t/t0) + Ce)
+    V[-2] = (Ntot-2)*S*t*deltar**3 - (Ntot-1.5)*Deff*deltar*t*Ce - (C0*(((Ntot-2)*deltar)**2/R**2 - 1)*np.exp(0/t0)+Ce)*(Ntot-2)*deltar**3
     V[-1] = 0
 
 
@@ -63,11 +67,13 @@ def solution_numérique(R,Ntot,t,tour):
     for j in range(tour):
         solution = inverseur(M,V)
         V = np.zeros(Ntot-1)
-        #Actualisation du vecteur V avec les résultats obtenus pour la prochaine itération (termes en c^t)
+        #Actualis ation du vecteur V avec les résultats obtenus pour la prochaine itération (termes en c^t)
         for i in range(Ntot-3):
             S = np.exp(-t*(j+2)/t0)*(C0*Deff*4/R**2 + (C0/t0)*(((i+1)*deltar)**2/R**2 - 1))
+            #S = np.exp(-t*(j+2)/t0)*(C0*Deff*4/R**2 + (C0/t0)*(((i+1)*deltar)**2/R**2 - 1)) - k*(C0*(((i+1)*deltar)**2/R**2 - 1)*np.exp(-t*(j+2)/t0) + Ce)
             V[i] = (i+1)*S*t*deltar**3 - solution[i+1]*(i+1)*deltar**3
         S = np.exp(-t*(j+2)/t0)*(C0*Deff*4/R**2 + (C0/t0)*(((Ntot-2)*deltar)**2/R**2 - 1))
+        #S = np.exp(-t*(j+2)/t0)*(C0*Deff*4/R**2 + (C0/t0)*(((Ntot-2)*deltar)**2/R**2 - 1)) - k*(C0*(((Ntot-2)*deltar)**2/R**2 - 1)*np.exp(-t*(j+2)/t0) + Ce)
         V[-2] = (Ntot-2)*S*t*deltar**3 - (Ntot-1.5)*Deff*t*deltar*Ce - solution[Ntot-2]*(Ntot-2)*deltar**3
         V[-1] = 0
     
@@ -83,7 +89,7 @@ def solution_analytique(t,r,R):
 #Test de la fonction solveur numérique
 #On fixe les variables tel que voulu
 Ntot1 = 100
-t = 0.0001 #pas de temps = jour
+t = 1 #pas de temps = seconde
 print(solution_numérique(R1,Ntot1,t,10))
 print(solution_analytique(10*t,0,R1))
 
@@ -108,9 +114,9 @@ plt.grid(linestyle='--')
 plt.show()
 
 
-plt.plot(valeurs2, diff, label = 'Erreur')
+plt.plot(valeurs2, diff)
 plt.legend()
-plt.title("Tracé de l'erreur'")
+plt.title("Tracé de l'erreur point par point")
 plt.xlabel("Rayon")
 plt.ylabel("Erreur")
 plt.grid(linestyle='--')
@@ -118,26 +124,35 @@ plt.show()
 
 
 #test stationnaire
-Ntot2=50
-mem = [0 for i in range(Ntot2)]
+Ntot2=10
+mem = [0 for i in range(Ntot2-1)]
 tourmax = 1
 truediff = 1
-while truediff > 0.01 :
-    valeursex = [solution_analytique(tourmax*t,i*(R1/(Ntot2-1)), R1) for i in range(Ntot2)]
-    difference = [abs(valeursex[i]-mem[i]) for i in range(Ntot2)]
+while truediff > 0.05 :
+    valeursex = solution_numérique(R1,Ntot2,t,tourmax)
+    difference = [abs(valeursex[i]-mem[i]) for i in range(Ntot2-1)]
     truediff = max(difference)
     mem = valeursex
-    tourmax+=100
+    tourmax+=50
 print(tourmax)
 
 
+#Calcul de la pente moyenne
+def pentemoyennelog(tab,intervalle):
+    N = len(tab)
+    somme=0
+    for i in range(N-1):
+        somme+=(np.log10(tab[i+1])-np.log10(tab[i]))/np.log10(intervalle)
+    return (1/N-1)*somme
+
+
 #Calcul des erreurs
-for tour in range(1,tourmax,int(0.05*tourmax)) :
+for tour in range(1,tourmax,int(0.49*tourmax)) :
     valeurs = [] #tableau de la taille des éléments du maillage
     L1 = [] #tableau de l'erreur L1 pour une taille
     L2 = [] #tableau de l'erreur L2 pour une taille
     Linf=[] #tableau de l'erreur Linf pour une taille
-    for i in range(6,100,10):
+    for i in range(6,200,60):
         Ntotex = i
         deltarex = R1/(Ntotex-1)
         valeurs.append(deltarex) #ajout de la taille des éléments
@@ -156,14 +171,14 @@ for tour in range(1,tourmax,int(0.05*tourmax)) :
         Linf.append(ref)
         
     #Tracé des graphiques
-    plt.plot(valeurs, L1, label = 'L1')
-    plt.plot(valeurs, L2, label = 'L2')
-    plt.plot(valeurs, Linf, label = 'Linf')
+    plt.plot(valeurs, L1, "-gs", label = 'L1, pente moyenne : ' + str(round(pentemoyennelog(L1,50),3)))
+    plt.plot(valeurs, L2, "-bs", label = 'L2, pente moyenne : ' + str(round(pentemoyennelog(L2,50),3)))
+    plt.plot(valeurs, Linf, "-rs", label = 'Linf, pente moyenne : '  + str(round(pentemoyennelog(Linf,50),3)))
     plt.legend()
     plt.xscale("log")
     plt.yscale("log")
-    plt.title("Erreurs L1, L2 et Linf en fonction de la taille du maillage (échelle log-log), nombre de tours" + str(tour))
-    plt.xlabel("Taille du maillage (10^xx m)")
-    plt.ylabel("Erreur (10^xx)")
+    plt.title("Erreurs L1, L2 et Linf en fonction de la taille du maillage (échelle log-log), nombre de tours : " + str(tour))
+    plt.xlabel("Taille du maillage (m)")
+    plt.ylabel("Erreur")
     plt.grid(True,which="both", linestyle='--')
     plt.show()
